@@ -1,0 +1,261 @@
+from typing import List, Dict, Any
+from models import PackagingMaterialSpec, EvidenceRecord
+
+# Pre-defined Food Commodity Profiles for lookup and defaults
+DEMO_FOOD_PROFILES: Dict[str, Dict[str, Any]] = {
+    "Tomato": {
+        "commodity": "Tomato",
+        "form": "Fresh Whole (Vine Ripe)",
+        "moisture_content_pct": 94.5,
+        "fat_oil_content_pct": 0.2,
+        "ph_level": 4.3,
+        "respiration_type": "Active (Climacteric)",
+        "target_shelf_life_days": 14,
+        "respiration_rate_co2_mg_kg_h": 28.5,
+        "optimal_temp_c": 12.5,
+        "optimal_rh_pct": 90.0,
+        "vulnerability_notes": "High moisture loss risk, mechanical bruising, chilling injury below 10°C, ethylene sensitivity."
+    },
+    "Apple": {
+        "commodity": "Apple",
+        "form": "Fresh Whole",
+        "moisture_content_pct": 85.5,
+        "fat_oil_content_pct": 0.17,
+        "ph_level": 3.8,
+        "respiration_type": "Moderate (Climacteric)",
+        "target_shelf_life_days": 30,
+        "respiration_rate_co2_mg_kg_h": 12.0,
+        "optimal_temp_c": 4.0,
+        "optimal_rh_pct": 92.0,
+        "vulnerability_notes": "Moisture loss, ethylene accumulation, firmness decay."
+    },
+    "Mango": {
+        "commodity": "Mango",
+        "form": "Fresh Whole",
+        "moisture_content_pct": 83.5,
+        "fat_oil_content_pct": 0.38,
+        "ph_level": 4.5,
+        "respiration_type": "Active (High Climacteric)",
+        "target_shelf_life_days": 12,
+        "respiration_rate_co2_mg_kg_h": 45.0,
+        "optimal_temp_c": 13.0,
+        "optimal_rh_pct": 88.0,
+        "vulnerability_notes": "Chilling injury, sap burn, rapid softening under thermal abuse."
+    },
+    "Potato": {
+        "commodity": "Potato",
+        "form": "Fresh Tuber",
+        "moisture_content_pct": 79.0,
+        "fat_oil_content_pct": 0.1,
+        "ph_level": 5.8,
+        "respiration_type": "Low (Non-climacteric)",
+        "target_shelf_life_days": 60,
+        "respiration_rate_co2_mg_kg_h": 6.0,
+        "optimal_temp_c": 8.0,
+        "optimal_rh_pct": 90.0,
+        "vulnerability_notes": "Sprouting, greening under light exposure, fungal rot."
+    },
+    "Leafy Vegetables": {
+        "commodity": "Leafy Vegetables",
+        "form": "Fresh Cut Greens",
+        "moisture_content_pct": 92.0,
+        "fat_oil_content_pct": 0.3,
+        "ph_level": 6.2,
+        "respiration_type": "Very Active",
+        "target_shelf_life_days": 7,
+        "respiration_rate_co2_mg_kg_h": 60.0,
+        "optimal_temp_c": 2.0,
+        "optimal_rh_pct": 95.0,
+        "vulnerability_notes": "Rapid wilting, enzymatic browning, anaerobic off-odors if unvented."
+    },
+    "Grains": {
+        "commodity": "Grains",
+        "form": "Dried Whole Kernel",
+        "moisture_content_pct": 12.0,
+        "fat_oil_content_pct": 1.5,
+        "ph_level": 6.5,
+        "respiration_type": "Non-respiring",
+        "target_shelf_life_days": 180,
+        "respiration_rate_co2_mg_kg_h": 0.2,
+        "optimal_temp_c": 20.0,
+        "optimal_rh_pct": 50.0,
+        "vulnerability_notes": "Moisture re-absorption, mold growth above 14% moisture, insect infestation."
+    },
+    "Bakery Product": {
+        "commodity": "Bakery Product",
+        "form": "Baked Bread / Muffin",
+        "moisture_content_pct": 36.0,
+        "fat_oil_content_pct": 6.5,
+        "ph_level": 5.5,
+        "respiration_type": "Non-respiring",
+        "target_shelf_life_days": 10,
+        "respiration_rate_co2_mg_kg_h": 0.0,
+        "optimal_temp_c": 22.0,
+        "optimal_rh_pct": 60.0,
+        "vulnerability_notes": "Staling (starch retrogradation), mold growth, lipid oxidation."
+    },
+    "Processed Food": {
+        "commodity": "Processed Food",
+        "form": "Fried Ready-to-Eat Snack",
+        "moisture_content_pct": 2.5,
+        "fat_oil_content_pct": 28.0,
+        "ph_level": 6.0,
+        "respiration_type": "Non-respiring",
+        "target_shelf_life_days": 120,
+        "respiration_rate_co2_mg_kg_h": 0.0,
+        "optimal_temp_c": 25.0,
+        "optimal_rh_pct": 45.0,
+        "vulnerability_notes": "Rancidity (lipid oxidation), loss of crispness due to moisture ingress."
+    }
+}
+
+PACKAGING_CANDIDATES: List[PackagingMaterialSpec] = [
+    PackagingMaterialSpec(
+        id="MAT-MAP-EVOH-01",
+        name="MAP EVOH/PE High-Barrier Respiration-Matched Film",
+        structure="BOPA/EVOH/LDPE Multi-layer Laminate",
+        thickness_microns=65,
+        otr_cc_m2_day_atm=25.0,
+        wvtr_g_m2_day=1.2,
+        sealability_rating="High",
+        temp_min_c=-5.0,
+        temp_max_c=45.0,
+        gas_exchange_capable=True,
+        cost_index=1.45,
+        sustainability_score=6.5,
+        food_applications=["Tomato", "Mango", "Leafy Vegetables", "Fresh Cut Produce"],
+        evidence_status="Demo value — validated literature matching active MAP produce"
+    ),
+    PackagingMaterialSpec(
+        id="MAT-PLA-PERF-02",
+        name="Bio-PLA Micro-Perforated Breathable Packaging",
+        structure="Polylactic Acid (PLA) Monolayer perforated",
+        thickness_microns=35,
+        otr_cc_m2_day_atm=180.0,
+        wvtr_g_m2_day=15.0,
+        sealability_rating="Medium",
+        temp_min_c=2.0,
+        temp_max_c=40.0,
+        gas_exchange_capable=True,
+        cost_index=1.25,
+        sustainability_score=9.2,
+        food_applications=["Tomato", "Apple", "Potato", "Organic Produce"],
+        evidence_status="Demo value — compostable bio-polymer data"
+    ),
+    PackagingMaterialSpec(
+        id="MAT-FOIL-LAM-03",
+        name="PET/ALU/PE High-Barrier Hermetic Laminate",
+        structure="PET 12µm / ALU 7µm / LDPE 50µm",
+        thickness_microns=70,
+        otr_cc_m2_day_atm=0.1,
+        wvtr_g_m2_day=0.05,
+        sealability_rating="High",
+        temp_min_c=-20.0,
+        temp_max_c=65.0,
+        gas_exchange_capable=False,
+        cost_index=1.75,
+        sustainability_score=4.0,
+        food_applications=["Processed Food", "Grains", "Dried Snacks", "Coffee"],
+        evidence_status="Demo value — standard ultra-high barrier foil"
+    ),
+    PackagingMaterialSpec(
+        id="MAT-LDPE-STD-04",
+        name="Standard LDPE Monolayer Polybag",
+        structure="Low-Density Polyethylene (LDPE)",
+        thickness_microns=45,
+        otr_cc_m2_day_atm=450.0,
+        wvtr_g_m2_day=12.0,
+        sealability_rating="Medium",
+        temp_min_c=0.0,
+        temp_max_c=40.0,
+        gas_exchange_capable=False,
+        cost_index=0.80,
+        sustainability_score=5.0,
+        food_applications=["Grains", "Short-transit Produce", "General Packaging"],
+        evidence_status="Demo value — baseline economic benchmark"
+    ),
+    PackagingMaterialSpec(
+        id="MAT-BIO-CHIT-05",
+        name="Active Bio-Chitosan Composite Bio-Film",
+        structure="Chitosan-Starch Nanocomposite with Antimicrobial Essential Oils",
+        thickness_microns=40,
+        otr_cc_m2_day_atm=85.0,
+        wvtr_g_m2_day=8.5,
+        sealability_rating="Medium",
+        temp_min_c=4.0,
+        temp_max_c=35.0,
+        gas_exchange_capable=True,
+        cost_index=1.60,
+        sustainability_score=9.6,
+        food_applications=["Tomato", "Mango", "Berries", "Organic Fresh Fruits"],
+        evidence_status="Demo value — emerging active bio-packaging research"
+    )
+]
+
+EVIDENCE_KNOWLEDGE_BASE: List[EvidenceRecord] = [
+    EvidenceRecord(
+        id="EVI-TOM-001",
+        name="Tomato Respiration Rate & Gas Balance under MAP",
+        category="Research Literature",
+        property="Respiration Rate & Equilibrium O2/CO2",
+        value="O2: 3-5%, CO2: 4-8% at 12°C",
+        unit="Vol %",
+        conditions="T = 12.5°C, RH = 90%",
+        source="Journal of Food Packaging Science & Tech (2023), Vol 48, pp 112-124",
+        confidence="High",
+        last_updated="2025-11-15",
+        applicability_note="Critical parameter for fresh tomato modified atmosphere packaging design to prevent anaerobic fermentation."
+    ),
+    EvidenceRecord(
+        id="EVI-TOM-002",
+        name="Water Vapor Transmission Threshold for Tomato Mass Loss",
+        category="Food Property Database",
+        property="Transpiration Coefficient / Mass Loss Limit",
+        value="Max 5.0% weight loss before shriveling",
+        unit="% fresh weight",
+        conditions="T = 25°C, RH = 60%, 48h Transit",
+        source="FAO Postharvest Handling Manual & Commodity Database",
+        confidence="High",
+        last_updated="2025-08-10",
+        applicability_note="Determines maximum allowed WVTR for transit packaging without cold chain."
+    ),
+    EvidenceRecord(
+        id="EVI-MAT-003",
+        name="EVOH Barrier Temperature Dependency Factor",
+        category="Packaging Material Data",
+        property="OTR Temperature Sensitivity (Arrhenius Model)",
+        value="OTR doubles per 10°C increase",
+        unit="Factor / 10°C",
+        conditions="T = 10°C to 35°C",
+        source="Polymer Packaging Datasheet & ASTM D3985 Test Reports",
+        confidence="High",
+        last_updated="2026-01-20",
+        applicability_note="Used in Journey Stress Test model when temperature spikes above baseline."
+    ),
+    EvidenceRecord(
+        id="EVI-REG-004",
+        name="FSSAI Food Contact Plastics Safety Standard",
+        category="Regulatory Requirement",
+        property="Overall Migration Limit (OML)",
+        value="< 60 mg/kg food or 10 mg/dm²",
+        unit="mg/kg",
+        conditions="Simulants A, B, C, D2 at 40°C for 10 days",
+        source="FSSAI Packaging Regulations (IS 9845 / IS 10146)",
+        confidence="High",
+        last_updated="2025-12-01",
+        applicability_note="Mandatory regulatory compliance gate for all food-contact polymers in India."
+    ),
+    EvidenceRecord(
+        id="EVI-SNK-005",
+        name="Critical Moisture Content for Crisp Snack Staling",
+        category="Research Literature",
+        property="Critical Water Activity (aw)",
+        value="aw = 0.38 to 0.43 (Moisture > 4.2%)",
+        unit="water activity aw",
+        conditions="T = 25°C",
+        source="Food Physics & Crispness Decay Matrix",
+        confidence="Moderate",
+        last_updated="2024-10-05",
+        applicability_note="Requires zero-wvtr barrier foil packaging to prevent premature moisture ingress."
+    )
+]
